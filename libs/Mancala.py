@@ -173,9 +173,9 @@ class Dojo:
 
     def play_many_games(self, count, v=0, multi=False):
         if multi:
-            data = [(True, 0,)] * 3
+            data = [(True, 0,)] * count
             results = ProcessingPool().map(self.play_one_game, data)
-            print results
+            print len(results)
 
         if not multi:
             t = time()
