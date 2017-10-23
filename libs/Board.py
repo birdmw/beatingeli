@@ -23,9 +23,9 @@ class Board:
         Play takes in a chosen bin, and updates self.pos (board position) as per the rules of the game
         Player 1 can play bins 1 to 6. Player 2 can play bins 8 to 13. A chosen bin should not be empty.
         :param bin: int
-        :param v: int
         :return:
         """
+
         # Set your mancala bin based on who's turn it is
         mancala = 7 if "1" in self.pos["turn"] else 0
         # As well set your opponents
@@ -36,6 +36,13 @@ class Board:
             my_bins, opp_bins = range(1, 7), range(8, 14)
         else:  # mancala == 0
             my_bins, opp_bins = range(8, 14), range(1, 6)
+
+        if not self.pos['turn']:
+            print("Game Over.")
+            return
+
+        if self.pos[bin] == 0 or bin not in my_bins:
+            raise ValueError('Invalid Move')
 
         # If bins 1-7 have no stones, bins 8-14 pour into player 2's mancala
         if sum([self.pos[i] for i in range(1, 7)]) == 0:
