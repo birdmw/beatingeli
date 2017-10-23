@@ -1,3 +1,6 @@
+from random import choice
+from time import time
+
 class Board:
     def __init__(self):
         """
@@ -44,29 +47,8 @@ class Board:
         if self.pos[hole] == 0 or hole not in my_holes:
             raise ValueError('Invalid Move')
 
-        # If holes 1-7 have no stones, holes 8-14 pour into player 2's mancala
-        if sum([self.pos[i] for i in range(1, 7)]) == 0:
-            # Count up the stones
-            stones = sum([self.pos[i] for i in range(8, 14)])
-            # Empty the holes
-            for i in range(8, 14):
-                self.pos[i] = 0
-            # Add the stones to the mancala
-            self.pos[0] += stones
-            # The board is empty, so it is nobodies turn
-            self.pos['turn'] = None
-
-        # If holes 8-14 have no stones, holes 1-7 pour into player 1's mancala
-        elif sum([self.pos[i] for i in range(8, 14)]) == 0:
-            # Count up the stones
-            stones = sum([self.pos[i] for i in range(1, 7)])
-            # Empty the holes
-            for i in range(1, 7):
-                self.pos[i] = 0
-            # Add the stones to the mancala
-            self.pos[7] += stones
-            # The board is empty, so it is nobodies turn
-            self.pos['turn'] = None
+        # Sweep checks if one side is completely empty
+        # self.sweep()
 
         # If it is someones turn to play
         if self.pos['turn']:
@@ -103,6 +85,9 @@ class Board:
                     self.pos["turn"] = "player_2"
                 else:  # mancala == 0
                     self.pos["turn"] = "player_1"
+                    # Sweep checks if one side is completely empty
+                    # We have to do this check again since
+        self.sweep()
 
         if not self.winner:
             self.history.append(dict(self.pos))
@@ -118,6 +103,31 @@ class Board:
             self.winner = 'tie'
             self.pos['turn'] = None
 
+    def sweep(self):
+        # If holes 1-7 have no stones, holes 8-14 pour into player 2's mancala
+        if sum([self.pos[i] for i in range(1, 7)]) == 0:
+            # Count up the stones
+            stones = sum([self.pos[i] for i in range(8, 14)])
+            # Empty the holes
+            for i in range(8, 14):
+                self.pos[i] = 0
+            # Add the stones to the mancala
+            self.pos[0] += stones
+            # The board is empty, so it is nobodies turn
+            self.pos['turn'] = None
+
+        # If holes 8-14 have no stones, holes 1-7 pour into player 1's mancala
+        elif sum([self.pos[i] for i in range(8, 14)]) == 0:
+            # Count up the stones
+            stones = sum([self.pos[i] for i in range(1, 7)])
+            # Empty the holes
+            for i in range(1, 7):
+                self.pos[i] = 0
+            # Add the stones to the mancala
+            self.pos[7] += stones
+            # The board is empty, so it is nobodies turn
+            self.pos['turn'] = None
+
     def print_(self):
         print("======BOARD========")
         print("Left Mancala:", self.pos[0])
@@ -126,5 +136,61 @@ class Board:
         print("Right Mancala:", self.pos[7])
         print("===================")
 
+    def reset(self):
+        self.__init__()
+
+
 class Dojo:
-    def __init__(self):
+    def __init__(self, p1, p2, board):
+        self.p1 = p1
+        self.p2 = p2
+        self.board = board
+        self.history = []
+
+    def play_one_game(self, rand_sample=False, v=0):
+        while self.board.pos['turn']:
+            if v:
+                self.board.print_()
+                print(self.board.pos['turn'] + "'s turn")
+            if self.board.pos['turn'] == 'player_1':
+                move = self.p1(self.board.pos)
+            else:  # self.board.pos['turn'] == 'player_2'
+                move = self.p2(self.board.pos)
+            if v:
+                print(self.board.pos['turn'], "plays", move)
+            self.board.play(move)
+        if v:
+            self.board.print_()
+            print("winner is " + self.board.winner)
+        if rand_sample:
+            rand_sample = dict(choice(self.board.history))
+            rand_sample['winner'] = self.board.winner
+            self.history.append(rand_sample)
+
+    def play_many_games(self, count, v=0):
+        t = time()
+        for c in range(count):
+            self.play_one_game(rand_sample=True)
+            self.board.reset()
+            if v:
+                if time() > t + 3:
+                    print(c)
+                    t += 3
+
+
+def random_bot(pos):
+    if pos['turn'] == 'player_1':
+        return choice(filter(lambda x: pos[x] > 0, range(1, 7)))
+    elif pos['turn'] == 'player_2':
+        return choice(filter(lambda x: pos[x] > 0, range(8, 14)))
+
+
+if __name__ == "__main__":
+    p1 = random_bot
+    p2 = p1
+    b = Board()
+    d = Dojo(p1, p2, b)
+    #d.play_one_game(rand_sample=True, v=0)
+    #print d.history
+    d.play_many_games(100000, v=1)
+    print len(d.history)
