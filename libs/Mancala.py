@@ -1,5 +1,7 @@
-from random import choice
+from pathos.multiprocessing import ProcessingPool
+import random
 from time import time
+
 
 class Board:
     def __init__(self):
@@ -163,26 +165,34 @@ class Dojo:
             self.board.print_()
             print("winner is " + self.board.winner)
         if rand_sample:
-            rand_sample = dict(choice(self.board.history))
-            rand_sample['winner'] = self.board.winner
-            self.history.append(rand_sample)
+            sample = dict(random.choice(self.board.history))
+            sample['winner'] = self.board.winner
+            # self.history.append(sample)
+            return sample
+        return
 
-    def play_many_games(self, count, v=0):
-        t = time()
-        for c in range(count):
-            self.play_one_game(rand_sample=True)
-            self.board.reset()
-            if v:
-                if time() > t + 3:
-                    print(c)
-                    t += 3
+    def play_many_games(self, count, v=0, multi=False):
+        if multi:
+            data = [(True, 0,)] * 3
+            results = ProcessingPool().map(self.play_one_game, data)
+            print results
+
+        if not multi:
+            t = time()
+            for c in range(count):
+                self.play_one_game(rand_sample=True)
+                self.board.reset()
+                if v:
+                    if time() > t + 3:
+                        print(c)
+                        t += 3
 
 
 def random_bot(pos):
     if pos['turn'] == 'player_1':
-        return choice(filter(lambda x: pos[x] > 0, range(1, 7)))
+        return random.choice(filter(lambda x: pos[x] > 0, range(1, 7)))
     elif pos['turn'] == 'player_2':
-        return choice(filter(lambda x: pos[x] > 0, range(8, 14)))
+        return random.choice(filter(lambda x: pos[x] > 0, range(8, 14)))
 
 
 if __name__ == "__main__":
@@ -190,7 +200,7 @@ if __name__ == "__main__":
     p2 = p1
     b = Board()
     d = Dojo(p1, p2, b)
-    #d.play_one_game(rand_sample=True, v=0)
-    #print d.history
-    d.play_many_games(100000, v=1)
-    print len(d.history)
+    # d.play_one_game(rand_sample=True, v=0)
+    # print d.history
+    d.play_many_games(1000, v=1, multi=True)
+    # print len(d.history)
