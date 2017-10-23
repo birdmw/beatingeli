@@ -8,7 +8,7 @@ class Board:
         # player_1 starts
         self.pos = {0: 0, 7: 0, "turn": 'player_1'}
 
-        # start with bins 1-7 and bins 8-14 having 4 stones each
+        # start with holes 1-7 and holes 8-14 having 4 stones each
         for i in range(1, 7) + range(8, 14):
             self.pos[i] = 4
 
@@ -18,37 +18,37 @@ class Board:
         # Record the winner
         self.winner = None
 
-    def play(self, bin):
+    def play(self, hole):
         """
-        Play takes in a chosen bin, and updates self.pos (board position) as per the rules of the game
-        Player 1 can play bins 1 to 6. Player 2 can play bins 8 to 13. A chosen bin should not be empty.
-        :param bin: int
+        Play takes in a chosen hole, and updates self.pos (board position) as per the rules of the game
+        Player 1 can play holes 1 to 6. Player 2 can play holes 8 to 13. A chosen hole should not be empty.
+        :param hole: int
         :return:
         """
 
-        # Set your mancala bin based on who's turn it is
+        # Set your mancala hole based on who's turn it is
         mancala = 7 if "1" in self.pos["turn"] else 0
         # As well set your opponents
         opp_mancala = 0 if "1" in self.pos["turn"] else 7
 
-        # Declare which bins are the current players
+        # Declare which holes are the current players
         if mancala:  # mancala == 7
-            my_bins, opp_bins = range(1, 7), range(8, 14)
+            my_holes, opp_holes = range(1, 7), range(8, 14)
         else:  # mancala == 0
-            my_bins, opp_bins = range(8, 14), range(1, 6)
+            my_holes, opp_holes = range(8, 14), range(1, 6)
 
         if not self.pos['turn']:
             print("Game Over.")
             return
 
-        if self.pos[bin] == 0 or bin not in my_bins:
+        if self.pos[hole] == 0 or hole not in my_holes:
             raise ValueError('Invalid Move')
 
-        # If bins 1-7 have no stones, bins 8-14 pour into player 2's mancala
+        # If holes 1-7 have no stones, holes 8-14 pour into player 2's mancala
         if sum([self.pos[i] for i in range(1, 7)]) == 0:
             # Count up the stones
             stones = sum([self.pos[i] for i in range(8, 14)])
-            # Empty the bins
+            # Empty the holes
             for i in range(8, 14):
                 self.pos[i] = 0
             # Add the stones to the mancala
@@ -56,11 +56,11 @@ class Board:
             # The board is empty, so it is nobodies turn
             self.pos['turn'] = None
 
-        # If bins 8-14 have no stones, bins 1-7 pour into player 1's mancala
+        # If holes 8-14 have no stones, holes 1-7 pour into player 1's mancala
         elif sum([self.pos[i] for i in range(8, 14)]) == 0:
             # Count up the stones
             stones = sum([self.pos[i] for i in range(1, 7)])
-            # Empty the bins
+            # Empty the holes
             for i in range(1, 7):
                 self.pos[i] = 0
             # Add the stones to the mancala
@@ -70,35 +70,35 @@ class Board:
 
         # If it is someones turn to play
         if self.pos['turn']:
-            # Count stones from chosen bin
-            stones = self.pos[bin]
-            # Empty bin from which stones are taken
-            self.pos[bin] = 0
+            # Count stones from chosen hole
+            stones = self.pos[hole]
+            # Empty hole from which stones are taken
+            self.pos[hole] = 0
             # Go around the board placing stones one at a time
             for s in range(stones):
-                bin += 1
-                # Loop around at bin 13
-                if bin == 14:
-                    bin = 0
+                hole += 1
+                # Loop around at hole 13
+                if hole == 14:
+                    hole = 0
                 # Skip opponents mancala
-                if bin == opp_mancala:
-                    bin += 1
-                # Add stone to bin
-                self.pos[bin] += 1
+                if hole == opp_mancala:
+                    hole += 1
+                # Add stone to hole
+                self.pos[hole] += 1
 
-            # If your turn ends in one of your own bins,
+            # If your turn ends in one of your own holes,
             # and it was previously empty,
             # and there are opponent stones on the opposite side
-            if self.pos[bin] == 1 and bin in my_bins and self.pos[14 - bin]:
-                # Place the one stone from your own bin into your mancala
-                self.pos[mancala] += self.pos[bin]
-                self.pos[bin] = 0
-                # As well as the stones from the opposing bin
-                self.pos[mancala] += self.pos[14 - bin]
-                self.pos[14 - bin] = 0
+            if self.pos[hole] == 1 and hole in my_holes and self.pos[14 - hole]:
+                # Place the one stone from your own hole into your mancala
+                self.pos[mancala] += self.pos[hole]
+                self.pos[hole] = 0
+                # As well as the stones from the opposing hole
+                self.pos[mancala] += self.pos[14 - hole]
+                self.pos[14 - hole] = 0
 
             # Change players if final stone was not in the players own mancala
-            if bin != mancala:
+            if hole != mancala:
                 if self.pos["turn"] == 'player_1':
                     self.pos["turn"] = "player_2"
                 else:  # mancala == 0
@@ -125,3 +125,6 @@ class Board:
         print([str(self.pos[i]) for i in range(1, 7)])
         print("Right Mancala:", self.pos[7])
         print("===================")
+
+class Dojo:
+    def __init__(self):
