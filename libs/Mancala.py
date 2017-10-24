@@ -1,5 +1,5 @@
-from pathos.multiprocessing import ProcessingPool
 import random
+from multiprocessing import Pool, cpu_count
 from time import time
 
 
@@ -142,50 +142,54 @@ class Board:
         self.__init__()
 
 
-class Dojo:
-    def __init__(self, p1, p2, board):
-        self.p1 = p1
-        self.p2 = p2
-        self.board = board
-        self.history = []
-
-    def play_one_game(self, rand_sample=False, v=0):
-        while self.board.pos['turn']:
-            if v:
-                self.board.print_()
-                print(self.board.pos['turn'] + "'s turn")
-            if self.board.pos['turn'] == 'player_1':
-                move = self.p1(self.board.pos)
-            else:  # self.board.pos['turn'] == 'player_2'
-                move = self.p2(self.board.pos)
-            if v:
-                print(self.board.pos['turn'], "plays", move)
-            self.board.play(move)
+def play_one_game(player_tuple, snapshot=True, v=0):
+    p1, p2 = player_tuple[0], player_tuple[1]
+    history = []
+    board = Board()
+    while board.pos['turn']:
         if v:
-            self.board.print_()
-            print("winner is " + self.board.winner)
-        if rand_sample:
-            sample = dict(random.choice(self.board.history))
-            sample['winner'] = self.board.winner
-            # self.history.append(sample)
-            return sample
-        return
+            board.print_()
+            print(board.pos['turn'] + "'s turn")
+        history.append(dict(board.pos))
+        if board.pos['turn'] == 'player_1':
+            move = p1(board.pos)
+        else:  # self.board.pos['turn'] == 'player_2'
+            move = p2(board.pos)
+        if v:
+            print(board.pos['turn'], "plays", move)
+        board.play(move)
+    if v:
+        board.print_()
+        print("winner is " + board.winner)
+    history.append(dict(board.pos))
+    game_record = {'history': history, 'winner': board.winner}
+    if snapshot:
+        snapshot = random.choice(game_record['history'])
+        snapshot['winner'] = game_record['winner']
+        return snapshot
+    return game_record
 
-    def play_many_games(self, count, v=0, multi=False):
-        if multi:
-            data = [(True, 0,)] * count
-            results = ProcessingPool().map(self.play_one_game, data)
-            print len(results)
 
-        if not multi:
-            t = time()
-            for c in range(count):
-                self.play_one_game(rand_sample=True)
-                self.board.reset()
-                if v:
-                    if time() > t + 3:
-                        print(c)
-                        t += 3
+def play_many_games(player_tuple, count, multi=False):
+    snapshot_collection = []
+    if multi:
+        pool = Pool(processes=cpu_count())
+        sequence = [player_tuple] * count
+        snapshot_collection = pool.map(play_one_game, sequence)
+        pool.close()
+        pool.join()
+
+    else:  # not multi
+        t = time()
+        board = Board()
+        for c in range(count):
+            snapshot = play_one_game(player_tuple)
+            snapshot_collection.append(snapshot)
+            board.reset()
+            if time() > t + 3:
+                print(c)
+                t += 3
+    return snapshot_collection
 
 
 def random_bot(pos):
@@ -196,11 +200,7 @@ def random_bot(pos):
 
 
 if __name__ == "__main__":
-    p1 = random_bot
-    p2 = p1
-    b = Board()
-    d = Dojo(p1, p2, b)
-    # d.play_one_game(rand_sample=True, v=0)
-    # print d.history
-    d.play_many_games(1000, v=1, multi=True)
-    # print len(d.history)
+    players = (random_bot, random_bot)
+    records = play_many_games(player_tuple=players, count=100000, multi=True)
+    print len(records)
+    # print records
