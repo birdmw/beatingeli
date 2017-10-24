@@ -1,5 +1,7 @@
-import random
+from csv import DictWriter
 from multiprocessing import Pool, cpu_count
+from os import sep
+from random import choice
 from time import time
 
 
@@ -164,13 +166,13 @@ def play_one_game(player_tuple, snapshot=True, v=0):
     history.append(dict(board.pos))
     game_record = {'history': history, 'winner': board.winner}
     if snapshot:
-        snapshot = random.choice(game_record['history'])
+        snapshot = choice(game_record['history'])
         snapshot['winner'] = game_record['winner']
         return snapshot
     return game_record
 
 
-def play_many_games(player_tuple, count, multi=False):
+def play_many_games(player_tuple, count, multi=True):
     snapshot_collection = []
     if multi:
         pool = Pool(processes=cpu_count())
@@ -179,7 +181,7 @@ def play_many_games(player_tuple, count, multi=False):
         pool.close()
         pool.join()
 
-    else:  # not multi
+    else:  # not multiprocessed
         t = time()
         board = Board()
         for c in range(count):
@@ -194,13 +196,20 @@ def play_many_games(player_tuple, count, multi=False):
 
 def random_bot(pos):
     if pos['turn'] == 'player_1':
-        return random.choice(filter(lambda x: pos[x] > 0, range(1, 7)))
+        return choice(filter(lambda x: pos[x] > 0, range(1, 7)))
     elif pos['turn'] == 'player_2':
-        return random.choice(filter(lambda x: pos[x] > 0, range(8, 14)))
+        return choice(filter(lambda x: pos[x] > 0, range(8, 14)))
+
+
+def data_to_csv(data, file_path):
+    keys = data[0].keys()
+    with open(file_path, 'wb') as output_file:
+        dict_writer = DictWriter(output_file, keys, lineterminator='\n')
+        dict_writer.writeheader()
+        dict_writer.writerows(data)
 
 
 if __name__ == "__main__":
     players = (random_bot, random_bot)
     records = play_many_games(player_tuple=players, count=100000, multi=True)
-    print len(records)
-    # print records
+    data_to_csv(records, sep.join(['..', 'data', 'games.csv']))
