@@ -1,26 +1,30 @@
 from csv import DictWriter
 from multiprocessing import Pool, cpu_count
 from os import sep
-from random import choice
+from random import random, choice
 from time import time
 
 
 class Board:
-    def __init__(self):
+    def __init__(self, pos=None, record_history=True):
         """
         self.pos (board position) is all of the information available to an otherwise human player
         """
+        self.record_history = record_history
+        if pos:
+            self.pos = dict(pos)
+        else:
+            # position 0 and 7 are the mancalas for player 2 and player 1
+            # player_1 starts
+            self.pos = {0: 0, 7: 0, "turn": 'player_1', 'move_number': 0}
 
-        # position 0 and 7 are the mancalas for player 2 and player 1
-        # player_1 starts
-        self.pos = {0: 0, 7: 0, "turn": 'player_1'}
+            # start with holes 1-7 and holes 8-14 having 4 stones each
+            for i in range(1, 7) + range(8, 14):
+                self.pos[i] = 4
 
-        # start with holes 1-7 and holes 8-14 having 4 stones each
-        for i in range(1, 7) + range(8, 14):
-            self.pos[i] = 4
-
-        # Each board has an associated history of positions
-        self.history = [dict(self.pos)]
+        if self.record_history:
+            # Each board has an associated history of positions
+            self.history = [dict(self.pos)]
 
         # Record the winner
         self.winner = None
@@ -32,6 +36,8 @@ class Board:
         :param hole: int
         :return:
         """
+
+        self.pos['move_number'] += 1
 
         # Set your mancala hole based on who's turn it is
         mancala = 7 if "1" in self.pos["turn"] else 0
@@ -49,7 +55,8 @@ class Board:
             return
 
         if self.pos[hole] == 0 or hole not in my_holes:
-            raise ValueError('Invalid Move')
+            print "invalid move"
+            return
 
         # Sweep checks if one side is completely empty
         # self.sweep()
@@ -94,7 +101,8 @@ class Board:
         self.sweep()
 
         if not self.winner:
-            self.history.append(dict(self.pos))
+            if self.record_history:
+                self.history.append(dict(self.pos))
 
         # A player wins when they have over 24 stones in their mancala
         if self.pos[0] > 24:
@@ -144,39 +152,51 @@ class Board:
         self.__init__()
 
 
-def play_one_game(player_tuple, snapshot=True, v=0):
+def play_one_game(params):
+    player_tuple, snapshot, v, board, first_move = params
+    f_move = first_move
     p1, p2 = player_tuple[0], player_tuple[1]
-    history = []
-    board = Board()
+    if snapshot:
+        history = []
+    board = Board() if not board else board
     while board.pos['turn']:
         if v:
             board.print_()
             print(board.pos['turn'] + "'s turn")
-        history.append(dict(board.pos))
+        if snapshot:
+            history.append(dict(board.pos))
         if board.pos['turn'] == 'player_1':
             move = p1(board.pos)
         else:  # self.board.pos['turn'] == 'player_2'
             move = p2(board.pos)
         if v:
-            print(board.pos['turn'], "plays", move)
-        board.play(move)
+            print("**************************" + board.pos['turn'], "plays", move)
+        if first_move:
+            board.play(first_move)
+            first_move = None
+        else:
+            board.play(move)
+
     if v:
         board.print_()
         print("winner is " + board.winner)
-    history.append(dict(board.pos))
-    game_record = {'history': history, 'winner': board.winner}
     if snapshot:
+        history.append(dict(board.pos))
+        game_record = {'history': history, 'winner': board.winner}
         snapshot = choice(game_record['history'])
         snapshot['winner'] = game_record['winner']
         return snapshot
-    return game_record
+    if f_move:
+        return board.winner, f_move
+    return board.winner
 
 
-def play_many_games(player_tuple, count, multi=True):
+def play_many_games(params, count, multi=True):
+    player_tuple, snapshot, v, board, first_move = params
     snapshot_collection = []
     if multi:
         pool = Pool(processes=cpu_count())
-        sequence = [player_tuple] * count
+        sequence = [params] * count
         snapshot_collection = pool.map(play_one_game, sequence)
         pool.close()
         pool.join()
@@ -185,7 +205,7 @@ def play_many_games(player_tuple, count, multi=True):
         t = time()
         board = Board()
         for c in range(count):
-            snapshot = play_one_game(player_tuple)
+            snapshot = play_one_game(params)
             snapshot_collection.append(snapshot)
             board.reset()
             if time() > t + 3:
@@ -201,6 +221,85 @@ def random_bot(pos):
         return choice(filter(lambda x: pos[x] > 0, range(8, 14)))
 
 
+def monte_carlo(pos, seconds=10, bot=None, multi=True, v=1):
+    if not bot:
+        bot = random_bot
+    start = time()
+    stop = start + seconds
+    if pos['turn'] == 'player_1':
+        legal_plays = set(filter(lambda x: pos[x] > 0, range(1, 7)))
+    elif pos['turn'] == 'player_2':
+        legal_plays = set(filter(lambda x: pos[x] > 0, range(8, 14)))
+    else:
+        return None
+    if not legal_plays:
+        return None
+    elif len(legal_plays) == 1:
+        return legal_plays.pop()
+    else:
+        player = pos['turn']
+        enemy = 'player_2' if player == 'player_1' else 'player_1'
+        move_scores = {k: {'player_1': 1, 'player_2': 1, 'tie': 0} for k in legal_plays}
+        board = Board(pos=dict(pos), record_history=False)
+        if v:
+            trials = 0
+        legal_list = list(legal_plays)
+        while time() <= stop:
+            if multi:
+                pool = Pool(processes=cpu_count())
+                count = 10000 * int(seconds) * int(cpu_count() / 16.)
+                seq = [((bot, bot), False, 0, Board(dict(pos)), choice(legal_list),) for _ in xrange(count)]
+                winner_collection = pool.map(play_one_game, seq)
+                pool.close()
+                pool.join()
+                for (winner, chosen) in winner_collection:
+                    move_scores[chosen][winner] += 1
+                trials += count
+            else:  # not multi
+                pos_copy = dict(pos)
+                board.pos = pos_copy
+                chosen = choice(legal_list)  # for multiprocessing this will need to be a comprehension
+                winner, chosen = play_one_game(((bot, bot), False, 0, board, chosen))
+                # print "12341234"
+                # print winner, chosen
+                # print move_scores.keys()
+                # print "asdfasdfs"
+                move_scores[chosen][winner] += 1
+                trials += 1
+        if v > 1:
+            print(str(trials) + " trials")
+
+        move_percents = []
+        for move in move_scores.keys():
+            move_percents.append((move, move_scores[move][player] / float(move_scores[move][enemy])))
+
+        move = weighted_choice(move_percents, power=3)
+        return move
+
+
+class Human:
+    def __init__(self):
+        pass
+
+    def __call__(self, pos):
+        board = Board(dict(pos))
+        # board.print_()
+        bin = input("Enter Bin: ")
+        print int(bin)
+        return int(bin)
+
+
+def weighted_choice(my_list, power=1):
+    my_list = [(a, b ** power) for (a, b) in my_list]
+    max_ = sum([m[1] for m in my_list])
+    threshold = random() * max_
+    sum_ = 0
+    for (item, value) in my_list:
+        sum_ += value
+        if threshold <= sum_:
+            return item
+
+
 def data_to_csv(data, file_path):
     keys = data[0].keys()
     with open(file_path, 'wb') as output_file:
@@ -210,6 +309,25 @@ def data_to_csv(data, file_path):
 
 
 if __name__ == "__main__":
-    players = (random_bot, random_bot)
-    records = play_many_games(player_tuple=players, count=100000, multi=True)
-    data_to_csv(records, sep.join(['..', 'data', 'games.csv']))
+    # players = (random_bot, random_bot)
+    # records = play_many_games(player_tuple=players, count=100000, multi=True)
+    # data_to_csv(records, sep.join(['..', 'data', 'games.csv']))
+
+    p1, p2 = 0, 0
+    H = Human()
+    for i in range(1):
+        players = (monte_carlo, monte_carlo)
+        # # player_tuple, snapshot, v, board, first_move
+        # params = players, False, 0, None, None
+        # winner = play_one_game(params=params)
+        params = players, True, 0, None, None
+        for j in range(100)[1:]:
+            print j
+            snapshot_collection = play_many_games(params=params, count=j, multi=False)
+            data_to_csv(snapshot_collection, sep.join(['..', 'data', str(time()) + '.csv']))
+
+            # if '1' in winner:
+            #     p1 += 1
+            # if '2' in winner:
+            #     p2 += 1
+            # print "p1=", p1, " p2=", p2
