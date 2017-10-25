@@ -221,7 +221,7 @@ def random_bot(pos):
         return choice(filter(lambda x: pos[x] > 0, range(8, 14)))
 
 
-def monte_carlo(pos, seconds=10, bot=None, multi=True, v=1):
+def monte_carlo(pos, seconds=20, bot=None, multi=True, v=1):
     if not bot:
         bot = random_bot
     start = time()
@@ -273,7 +273,7 @@ def monte_carlo(pos, seconds=10, bot=None, multi=True, v=1):
         for move in move_scores.keys():
             move_percents.append((move, move_scores[move][player] / float(move_scores[move][enemy])))
 
-        move = weighted_choice(move_percents, power=3)
+        move = weighted_choice(move_percents, power=1)
         return move
 
 
@@ -321,7 +321,7 @@ if __name__ == "__main__":
         # params = players, False, 0, None, None
         # winner = play_one_game(params=params)
         params = players, True, 0, None, None
-        for j in range(100)[1:]:
+        for j in range(5)[1:]:
             print j
             snapshot_collection = play_many_games(params=params, count=j, multi=False)
             data_to_csv(snapshot_collection, sep.join(['..', 'data', str(time()) + '.csv']))
