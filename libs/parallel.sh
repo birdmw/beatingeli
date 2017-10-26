@@ -1,0 +1,10 @@
+python Mancala.py &
+python Mancala.py &
+python Mancala.py &
+python Mancala.py &
+python Mancala.py &
+python Mancala.py &
+python Mancala.py &
+python Mancala.py &
+python Mancala.py &
+python Mancala.py &
