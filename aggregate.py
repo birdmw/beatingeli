@@ -12,7 +12,8 @@ def aggregate(data_folder = 'data' + os.sep):
     df = df.drop_duplicates()
     df.to_csv(data_folder + 'aggregation.csv', index=False)
     only_files = [of for of in only_files if 'agg' not in of.lower()]
-    print only_files
-    
+    for f in only_files:
+        os.remove(f)
+
 if __name__ == '__main__':
     aggregate()
