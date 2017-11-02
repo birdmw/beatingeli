@@ -1,3 +1,4 @@
+import keras
 from csv import DictWriter
 from multiprocessing import Pool, cpu_count
 from os import sep
@@ -219,6 +220,21 @@ def random_bot(pos):
         return choice(filter(lambda x: pos[x] > 0, range(1, 7)))
     elif pos['turn'] == 'player_2':
         return choice(filter(lambda x: pos[x] > 0, range(8, 14)))
+
+def nnet(pos):
+    global nnet_model
+    try:
+        nnet_model
+    except:
+        filepath = 'nnet.pkl'
+        keras.models.load_model(filepath)
+    #TODO: make a board with pos
+    #TODO: make a function that converts a pos to an array for the nnet
+    #TODO: make a list of possible_moves (use randombots logic without the choice piece)
+    #TODO: for each possible move, make a copy of the board and play that one move,
+    #           then predict the winner making tuples along the way 
+    #TODO: rectify predictions to 1-prediction if global board.pos is player_1
+    #TODO: make a weighted_choice and return it
 
 
 def monte_carlo(pos, seconds=20, bot=None, multi=True, v=1):
