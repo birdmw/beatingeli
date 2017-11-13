@@ -56,7 +56,7 @@ class Board:
             return
 
         if self.pos[hole] == 0 or hole not in my_holes:
-            print "invalid move"
+            print("invalid move")
             return
 
         # Sweep checks if one side is completely empty
@@ -264,7 +264,7 @@ def monte_carlo(pos, seconds=20, bot=None, multi=True, v=1):
             if multi:
                 pool = Pool(processes=cpu_count())
                 count = 10000 * int(seconds) * int(cpu_count() / 16.)
-                seq = [((bot, bot), False, 0, Board(dict(pos)), choice(legal_list),) for _ in xrange(count)]
+                seq = [((bot, bot), False, 0, Board(dict(pos)), choice(legal_list),) for _ in range(count)]
                 winner_collection = pool.map(play_one_game, seq)
                 pool.close()
                 pool.join()
@@ -301,7 +301,7 @@ class Human:
         board = Board(dict(pos))
         # board.print_()
         bin = input("Enter Bin: ")
-        print int(bin)
+        print(int(bin))
         return int(bin)
 
 
@@ -338,7 +338,7 @@ if __name__ == "__main__":
         # winner = play_one_game(params=params)
         params = players, True, 0, None, None
         for j in range(5)[1:]:
-            print j
+            print(j)
             snapshot_collection = play_many_games(params=params, count=j, multi=False)
             data_to_csv(snapshot_collection, sep.join(['..', 'data', str(time()) + '.csv']))
 
